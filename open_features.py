@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-file1 = np.load('/home/ubuntu/Desktop/I3D_Feature_Extraction_resnet/output/Explosion036_x264.npy')
+file1 = np.load('/home/ubuntu/Desktop/Activity-Recognition-Feature-Extraction-for-W-VAD/output/Explosion036_x264.npy')
 file1 = file1.astype('float32')
 print(np.asarray(file1).shape)
 
