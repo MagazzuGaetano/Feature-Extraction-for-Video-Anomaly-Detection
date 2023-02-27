@@ -14,7 +14,7 @@ from torch.optim import lr_scheduler
 from torch.autograd import Variable
 import torchvision
 from models.resnet import i3_res50
-from utils.utils2 import from_frames_to_clips, load_rgb_batch, split_clip_indices_into_batches
+from utils.utils import from_frames_to_clips, load_rgb_batch, split_clip_indices_into_batches
 
 
 
@@ -27,19 +27,21 @@ def extract_features(i3d, clip_size, frequency, temppath, batch_size):
     frame_indices = from_frames_to_clips(rgb_files, clip_size, frequency)
 
     # divide clips into batches (for memory optimization)
-    # a batch can have more than one clip
-    frame_indices, batch_num = split_clip_indices_into_batches(frame_indices, batch_size)
+    # a batch of dimension 16 it's equal to a 16-frames clip
+    frame_indices = split_clip_indices_into_batches(frame_indices, batch_size)
 
     # iterate 10-crop augmentation
     full_features = [[] for i in range(10)]
-    for batch_id in range(batch_num):
+    number_of_batches = frame_indices.shape[0]
+
+    for batch_id in range(number_of_batches):
 
         # B=16 x T=16 x CROP=10 x CH=3 x H=224 x W=224
         batch_data = load_rgb_batch(temppath, rgb_files, frame_indices[batch_id]) 
 
         # iterate 10-crop augmentation
         for i in range(batch_data.shape[2]):
-            b_data = batch_data[:,:,i,:,:,:] # select i-crop
+            b_data = batch_data[:,:,i,:,:,:] # select the i-crop
             b_data = torch.from_numpy(b_data)
             b_data = b_data.transpose(1, 2) # B=16 x CH=3 x T=16 x H=224 x W=224
 
@@ -48,8 +50,9 @@ def extract_features(i3d, clip_size, frequency, temppath, batch_size):
                 inp = {'frames': b_data}
                 features = i3d(inp)
 
-            tmp = features.cpu().numpy()
-            full_features[i].append(tmp)
+            v = features.cpu().numpy() # single clip features extracted
+            v = v / np.sqrt(np.sum(v**2)) # single clip features normalized (L2)
+            full_features[i].append(v)
 
     full_features = [np.concatenate(i, axis=0) for i in full_features]
     full_features = [np.expand_dims(i, axis=0) for i in full_features]
@@ -64,7 +67,8 @@ def generate(datasetpath, outputpath, pretrainedpath, frequency, clip_size, batc
     Path(outputpath).mkdir(parents=True, exist_ok=True)
     temppath = outputpath+ "/temp/"
     rootdir = Path(datasetpath)
-    videos = [str(f) for f in rootdir.glob('**/*.mp4')]
+    #videos = [str(f) for f in rootdir.glob('**/*.mp4')]
+    videos = [str(f) for f in rootdir.glob('**/*.avi')]
 
     # setup the model
     i3d = i3_res50(400, pretrainedpath)
