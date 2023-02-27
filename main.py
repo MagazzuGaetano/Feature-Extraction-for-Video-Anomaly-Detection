@@ -24,7 +24,7 @@ def extract_features(i3d, clip_size, frequency, temppath, batch_size):
     rgb_files = natsorted([i for i in os.listdir(temppath)])
 
     # creating clips
-    frame_indices = from_frames_to_clips(rgb_files, clip_size, frequency)
+    frame_indices = from_frames_to_clips(rgb_files)
 
     # divide clips into batches (for memory optimization)
     # a batch of dimension 16 it's equal to a 16-frames clip
