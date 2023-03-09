@@ -1,5 +1,5 @@
 # Activity-Recognition-Feature-Extraction-for-W-VAD
-This repo contains code to extract the I3D / C3D features for the task of Weakly Video Anomaly Detection given a folder of videos
+This repo contains code to extract the C3D / I3D features for the task of Weakly Video Anomaly Detection given a folder of videos
 
 ## Credits
 The main resnet code and others is collected from the following repository.
