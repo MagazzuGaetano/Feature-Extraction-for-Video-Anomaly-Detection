@@ -4,7 +4,7 @@ This repo contains code to extract the C3D / I3D features for the task of Weakly
 ## Credits
 The main resnet code and others is collected from the following repository.
 * [c3d-pytorch](https://github.com/DavideA/c3d-pytorch)
-* [I3D_Feature_Extraction_resnet](https://github.com/GowthamGottimukkala/I3D_Feature_Extraction_resnet/edit/main/README.md)
+* [I3D_Feature_Extraction_resnet](https://github.com/GowthamGottimukkala/I3D_Feature_Extraction_resnet)
 
 ## Overview
 This code takes a folder of videos as input and for each video it saves ```C3D``` features the numpy file have dimension ```int(n/16) + 1 * 10 * 4096``` where n is the no.of frames in the video, for each frame 10 crops are taken and 4096 is the fc6 dimension.
