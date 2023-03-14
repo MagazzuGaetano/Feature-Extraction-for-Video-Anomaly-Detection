@@ -144,8 +144,8 @@ def generate(dataset_path, output_path, feature, clip_size, batch_size):
     Path(output_path).mkdir(parents=True, exist_ok=True)
     temp_path = output_path + "/temp/"
     root_dir = Path(dataset_path)
-    #videos = [str(f) for f in root_dir.glob('**/*.mp4')]
-    videos = [str(f) for f in root_dir.glob('**/*.avi')]
+    videos = [str(f) for f in root_dir.glob('**/*.mp4')]
+    # videos = [str(f) for f in root_dir.glob('**/*.avi')]
 
     # set up the model
     torch.backends.cudnn.benchmark = True
@@ -166,18 +166,14 @@ def generate(dataset_path, output_path, feature, clip_size, batch_size):
     Path(temp_path).mkdir(parents=True, exist_ok=True)
 
     for video in videos:
-        # frames_path = video.split(dataset_path)[1].split('.')[0]
-        # frames_path = os.path.join('/home/ubuntu/Desktop/tmp_sht_test', frames_path)
-
         # remove files into temp folder
         for f in Path(temp_path).glob('**/*'):
             os.remove(f)
 
-        # splitting the video into frames
+        # splitting the video into frames and saving them to an output folder
         extract_frames_from_video(video, temp_path)
 
         # extract features
-        features = None
         if feature == "I3D":
             features = extract_i3d_features(model, device, clip_size, temp_path, batch_size)
         else:

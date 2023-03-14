@@ -56,8 +56,8 @@ for key in c2:
 		new_key = 'layer%d.%d.%s.%s'%(layer-1, block, name, suffix)
 		key_map[new_key] = key
 
-from models import resnet
-pth = resnet.I3Res50(num_classes=400, use_nl=True)
+from models import i3d_resnet
+pth = i3d_resnet.I3Res50(num_classes=400, use_nl=True)
 state_dict = pth.state_dict()
 
 new_state_dict = {key: torch.from_numpy(c2[key_map[key]]) for key in state_dict if key in key_map}
