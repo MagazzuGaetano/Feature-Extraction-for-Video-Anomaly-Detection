@@ -56,7 +56,7 @@ def transform_frame(frame_path):
         T.Normalize(mean, std),
     ])
     transform = T.Compose([
-        # T.Resize(256),
+        #T.Resize(256),
         T.TenCrop(224),  # 112 for C3D or 224 for I3D
         T.Lambda(lambda crops: torch.stack([crop_transform(crop) for crop in crops])),
     ])
