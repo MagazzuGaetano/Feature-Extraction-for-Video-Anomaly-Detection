@@ -27,12 +27,12 @@ def extract_features(model, feature, device, clip_length, temp_path, batch_size)
     n_clips_inside_a_batch = frame_indices.shape[1]
 
     # iterate 10-crop augmentation
-    feature_dim = 1024 if feature == "i3D" else 4096
-    full_features = torch.zeros((n_batches, 10, n_clips_inside_a_batch, feature_dim), device=device)
+    feature_dim = 1024 if feature == "I3D" else 4096
+    full_features = torch.zeros((n_batches, 10, n_clips_inside_a_batch, feature_dim, 1, 1, 1), device=device)
     for batch_id in range(n_batches):
 
         # B=16 x T=16 x CROP=10 x CH=3 x H x W
-        batch_data = load_rgb_batch(temp_path, rgb_files, frame_indices[batch_id], device)
+        batch_data = load_rgb_batch(temp_path, rgb_files, frame_indices[batch_id], feature, device)
 
         # iterate 10-crop augmentation
         n_crops = batch_data.shape[2]
@@ -46,7 +46,7 @@ def extract_features(model, feature, device, clip_length, temp_path, batch_size)
 
             v = features  # single clip features extracted
             v = v / torch.linalg.norm(v)  # single clip features normalized (L2)
-            full_features[batch_id, i, :, :] = v
+            full_features[batch_id, i, :, :, :, :, :] = v
 
     full_features = full_features.cpu().numpy()
 
@@ -63,6 +63,7 @@ def extract_features(model, feature, device, clip_length, temp_path, batch_size)
     out = [np.concatenate(i, axis=0) for i in out]
     out = [np.expand_dims(i, axis=0) for i in out]
     out = np.concatenate(out, axis=0)
+    out = out[:, :, :, 0, 0, 0]
     out = np.array(out).transpose([1, 0, 2])
     return out
 
@@ -71,8 +72,8 @@ def generate(dataset_path, output_path, feature, clip_size, batch_size):
     Path(output_path).mkdir(parents=True, exist_ok=True)
     temp_path = output_path + "/temp/"
     root_dir = Path(dataset_path)
-    videos = [str(f) for f in root_dir.glob('**/*.mp4')]
-    # videos = [str(f) for f in root_dir.glob('**/*.avi')]
+    # videos = [str(f) for f in root_dir.glob('**/*.mp4')]
+    videos = [str(f) for f in root_dir.glob('**/*.avi')]
 
     # set up the model
     torch.backends.cudnn.benchmark = True
@@ -81,7 +82,7 @@ def generate(dataset_path, output_path, feature, clip_size, batch_size):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     if feature == "I3D":
-        model = i3d_model(nb_classes=400, pretrainedpath='pretrained/c3d.pickle')
+        model = i3d_model(nb_classes=400, pretrainedpath='pretrained/rgb_imagenet.pt')
     else:
         model = c3d_model(nb_classes=487, pretrainedpath='pretrained/c3d.pickle', feature_layer=6)
 
@@ -111,7 +112,7 @@ def generate(dataset_path, output_path, feature, clip_size, batch_size):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset_path', type=str, default="/home/ubuntu/Downloads/UCF-Crime/train")
+    parser.add_argument('--dataset_path', type=str, default="/media/ubuntu/TrekStor/TESI_ANOMALY_DETECTION/Datasets/videos/ShanghaiTech_new_split/test")
     parser.add_argument('--output_path', type=str, default="output")
     parser.add_argument('--feature', type=str, default="I3D")
     parser.add_argument('--clip_length', type=int, default=16)
