@@ -2,8 +2,37 @@ import numpy as np
 import torch
 import os
 import cv2
-from opencv_transforms import transforms as T
-from concurrent.futures import ThreadPoolExecutor
+from opencv_transforms import transforms as cv_t
+from concurrent.futures import ThreadPoolExecutor, wait, ALL_COMPLETED
+
+
+def extract_frames_from_video(video_name, output_dir):
+    cap = cv2.VideoCapture(video_name)
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    if frame_count == 0:
+        exit("Video file not found")
+
+    batch_size = 2 ** 12  # how many frames to save in parallel
+    batches = list(divide_chunks([0 for _ in range(frame_count)], batch_size))
+
+    k = 0
+    for i in range(len(batches)):
+        frames_to_save = []
+        frames_paths = []
+        for j in range(len(batches[i])):
+            frames_to_save.append(cap.read()[1])
+            frames_paths.append(os.path.join(output_dir, 'image%d.jpg' % k))
+            k = k + 1
+
+        max_workers = 8
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            f = lambda x: cv2.imwrite(x[0], x[1])
+            futures = list(map(lambda x: executor.submit(f, x), zip(frames_paths, frames_to_save)))
+            wait(futures, return_when=ALL_COMPLETED)
+
+    cap.release()
+    print('Frames Extracted From Video')
 
 
 def from_frames_to_clips(frames, step=16):
@@ -42,36 +71,56 @@ def split_clip_indices_into_batches(frame_indices, batch_size):
 
 
 # Normalize the video frames with mean and standard deviation calculated across all images
-# ResNet50 was pretrained on ImageNet Than trained on Kinetics same for the C3D model trained on the Sports-1M
+# The C3D model were trained from scratch on the Sports-1M
+def sports1M_mean_std():
+    mean = (0.4823, 0.4588, 0.4078)
+    std = (0.229, 0.224, 0.225)
+    return mean, std
+
+
+# Normalize the video frames with mean and standard deviation calculated across all images
+# ResNet50 and Inception-V1 were pretrained on ImageNet than trained on Kinetics
 def imagenet_mean_std():
     mean = [0.485, 0.456, 0.406]
     std = [0.229, 0.224, 0.225]
     return mean, std
 
 
-def transform_frame(frame_path):
-    mean, std = imagenet_mean_std()
-    crop_transform = T.Compose([
-        T.ToTensor(),
-        T.Normalize(mean, std),
+def transform_frame(frame, size, mean_std):
+    mean, std = mean_std
+    crop_transform = cv_t.Compose([
+        cv_t.ToTensor(),
+        cv_t.Normalize(mean, std),
     ])
-    transform = T.Compose([
-        #T.Resize(256),
-        T.TenCrop(224),  # 112 for C3D or 224 for I3D
-        T.Lambda(lambda crops: torch.stack([crop_transform(crop) for crop in crops])),
+    transform = cv_t.Compose([
+        # T.Resize(256),
+        cv_t.TenCrop(size),
+        cv_t.Lambda(lambda crops: torch.stack([crop_transform(crop) for crop in crops])),
     ])
+    return transform(frame)
 
+
+def transform_frame_i3d(frame_path):
     # read a single frame
     frame = cv2.imread(frame_path)
 
     # apply data augmentation
-    frame = transform(frame)
+    frame = transform_frame(frame, 224, imagenet_mean_std())
     return frame
 
 
-def load_rgb_batch(frames_dir, rgb_files, frame_indices, device):
-    # B=16 x T=16 x CROP=10 x CH=3 x H=224 x W=224
-    out = torch.zeros(frame_indices.shape + (10, 3, 224, 224), device=device)
+def transform_frame_c3d(frame_path):
+    # read a single frame
+    frame = cv2.imread(frame_path)
+
+    # apply data augmentation
+    frame = transform_frame(frame, 112, sports1M_mean_std())
+    return frame
+
+
+def load_rgb_batch(frames_dir, rgb_files, frame_indices, feature, device):
+    # B=16 x T=16 x CROP=10 x CH=3 x H x W
+    out = torch.zeros(frame_indices.shape + (10, 3, 112, 112), device=device)
 
     # num of clips
     n_clips = frame_indices.shape[0]
@@ -83,7 +132,10 @@ def load_rgb_batch(frames_dir, rgb_files, frame_indices, device):
 
         frames = None
         with ThreadPoolExecutor(max_workers=8) as executor:
-            frames = list(executor.map(transform_frame, frames_path))
+            if feature == "I3D":
+                frames = list(executor.map(transform_frame_i3d, frames_path))
+            else:
+                frames = list(executor.map(transform_frame_c3d, frames_path))
 
         for j in range(len(frames)):
             out[i, j, :, :, :, :] = frames[j]
