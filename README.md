@@ -7,9 +7,9 @@ The main resnet code and others is collected from the following repository.
 * [I3D_Feature_Extraction_resnet](https://github.com/GowthamGottimukkala/I3D_Feature_Extraction_resnet)
 
 ## Overview
-This code takes a folder of videos as input and for each video it saves ```C3D``` features the numpy file have dimension ```int(n/16) + 1 * 10 * 4096``` where n is the no.of frames in the video, for each frame 10 crops are taken and 4096 is the fc6 dimension.
+This code takes a folder of videos as input and for each video it saves ```C3D``` features the numpy file have dimension ```int(n/16) + 1 * 10 * 4096``` where n is the no.of frames in the video, for each frame 10 crops are taken and 4096 is the fc6 dimension of the C3D model.
 
-For ```I3D``` feature numpy file of dimension ```int(n/16) + 1 * 10 * 2048``` where 2048 is the mix_5c dimension.
+For ```I3D``` feature numpy file of dimension ```int(n/16) + 1 * 10 * 1024``` where 1024 is the mix_5c dimension of the I3D Model (Inception-V1).
 
 
 ### C3D Setup
