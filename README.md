@@ -15,16 +15,11 @@ For ```I3D``` feature numpy file of dimension ```int(n/16) + 1 * 10 * 1024``` wh
 ### C3D Setup
 * Download the pretrained weights (Sports1M) from [here](http://imagelab.ing.unimore.it/files/c3d_pytorch/c3d.pickle).
 
-### I3D Setup
-Download pretrained weights for I3D(Inception-V1) from [here](https://github.com/piergiaj/pytorch-i3d)
-Download pretrained weights for I3D(Resnet) from the nonlocal repo
-```bash
-wget https://dl.fbaipublicfiles.com/video-nonlocal/i3d_baseline_32x2_IN_pretrain_400k.pkl -P pretrained/
-```
-Convert these weights from caffe2 to pytorch. This is just a simple renaming of the blobs to match the pytorch model.
-```bash
-python -m utils.convert_weights pretrained/i3d_baseline_32x2_IN_pretrain_400k.pkl pretrained/i3d_r50_kinetics.pth
-```
+### I3D(Inception-V1) Setup
+Download pretrained weights for I3D from [here](https://github.com/piergiaj/pytorch-i3d)
+
+### I3D(Resnet) Setup
+Download pretrained weights for I3D(Resnet) from from [here](https://github.com/GowthamGottimukkala/I3D_Feature_Extraction_resnet)
 
 ### Parameters
 <pre>
