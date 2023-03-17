@@ -179,5 +179,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     generate(args.dataset_path, str(args.output_path), args.clip_length, args.batch_size)
 
-# python3 extract_c3d_features.py --dataset_path=/home/ubuntu/Downloads/UCF-Crime/train --output_path=output
-# python3 extract_c3d_features.py --dataset_path=ShanghaiTech_new_split/train/ --output_path=output
+# python3 extract_features.py --dataset_path=/home/ubuntu/Downloads/UCF-Crime/train --output_path=output
+# python3 extract_features.py --dataset_path=ShanghaiTech_new_split/train/ --output_path=output
