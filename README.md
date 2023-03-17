@@ -19,7 +19,7 @@ For ```I3D``` feature numpy file of dimension ```int(n/16) + 1 * 10 * 1024``` wh
 Download pretrained weights for I3D from [here](https://github.com/piergiaj/pytorch-i3d)
 
 ### I3D(Resnet) Setup
-Download pretrained weights for I3D(Resnet) from from [here](https://github.com/GowthamGottimukkala/I3D_Feature_Extraction_resnet)
+Download pretrained weights for I3D from [here](https://github.com/GowthamGottimukkala/I3D_Feature_Extraction_resnet)
 
 ### Parameters
 <pre>
