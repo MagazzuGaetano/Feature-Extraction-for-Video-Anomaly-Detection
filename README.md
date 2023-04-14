@@ -25,6 +25,9 @@ For ```I3D``` feature numpy file of dimension ```int(n/16) + 1 * 10 * 1024``` wh
 --feature:           C3D or I3D
 --clip_length        number of frames in a clip
 --batch_size:        batch size for clips
+--video_format_type: format type of videos (e.g. .avi or .mp4)
+--n_crops:           number of crops taken for each frame
+--save_single_crops: if true the features are saved individually for each crop
 </pre>
 
 ### Run
