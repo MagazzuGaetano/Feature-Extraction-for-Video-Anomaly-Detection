@@ -122,12 +122,8 @@ def load_rgb_batch(frames_dir, rgb_files, frame_indices, feature, device, n_crop
 
         frames = None
         with ThreadPoolExecutor(max_workers=8) as executor:
-            if feature == "I3D":
-                frames = list(executor.map(
-                    lambda x: transform_frame(x, image_size, image_normalization, n_crops), frames_path))
-            else:
-                frames = list(executor.map(
-                    lambda x: transform_frame(x, image_size, image_normalization, n_crops), frames_path))
+            frames = list(executor.map(
+                lambda x: transform_frame(x, image_size, image_normalization, n_crops), frames_path))
 
         for j in range(len(frames)):
             out[i, j, :, :, :, :] = frames[j]
