@@ -32,5 +32,5 @@ For ```I3D``` feature numpy file of dimension ```int(n/16) + 1 * 10 * 1024``` wh
 
 ### Run
 ```bash
-python main.py --datasetpath=samplevideos/ --outputpath=output
+python extract_features_from_videos.py --datasetpath=data_folder/ --outputpath=output
 ```
