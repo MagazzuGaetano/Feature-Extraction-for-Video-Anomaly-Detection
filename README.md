@@ -16,10 +16,7 @@ For ```I3D``` feature numpy file of dimension ```int(n/16) + 1 * 10 * 1024``` wh
 * Download the pretrained weights (Sports1M) from [here](http://imagelab.ing.unimore.it/files/c3d_pytorch/c3d.pickle).
 
 ### I3D(Inception-V1) Setup
-Download pretrained weights (Kinetics400) from [here](https://github.com/piergiaj/pytorch-i3d)
-
-### I3D(Resnet) Setup
-Download pretrained weights (Kinetics400) from [here](https://github.com/GowthamGottimukkala/I3D_Feature_Extraction_resnet)
+* Download pretrained weights (Kinetics400) from [here](https://github.com/piergiaj/pytorch-i3d)
 
 ### Parameters
 <pre>
