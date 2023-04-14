@@ -4,6 +4,7 @@ This repo contains code to extract the C3D / I3D features for the task of Weakly
 ## Credits
 The main resnet code and others is collected from the following repository.
 * [c3d-pytorch](https://github.com/DavideA/c3d-pytorch)
+* [pytorch-i3d](https://github.com/piergiaj/pytorch-i3d)
 * [I3D_Feature_Extraction_resnet](https://github.com/GowthamGottimukkala/I3D_Feature_Extraction_resnet)
 
 ## Overview
