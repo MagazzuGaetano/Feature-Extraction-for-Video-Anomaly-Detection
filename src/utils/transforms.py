@@ -9,6 +9,18 @@ from deprecation import deprecated
 sports1m_mean = np.load("data/c3d_mean.npy")
 sports1m_mean = sports1m_mean.squeeze().transpose(1, 2, 3, 0).astype(np.float32)
 
+class CropAugmentationFrame(cv_t.Compose):
+    def __init__(self, size, n_crops=10, crop_transform=None):
+        self.size = size
+        self.n_crops = n_crops
+        self.crop_transform = crop_transform
+
+        self.transforms = [
+            cv_t.TenCrop(size) if n_crops == 10 else cv_t.FiveCrop(size),
+            cv_t.Lambda(
+                lambda crops: torch.stack([crop_transform(crop) for crop in crops])
+            ),
+        ]
 
 @deprecated(
     details="This is an approximation. You should subtract the mean tensor by using the 'transform_clip_c3d' function."
@@ -68,50 +80,24 @@ def transform_frame(frame_path, size, image_normalization, use_rgb=False, n_crop
     if use_rgb:
         frame = frame[:, :, [2, 1, 0]]  # from BGR to RGB
 
-    crop_transform = cv_t.Compose(
-        [
-            cv_t.ToTensor(),
-            image_normalization,
-        ]
-    )
-
     # NOTE: in the original preprocessing of I3D all frames are resized with the min_side to 256
     # but i never used resize because I get better results without, i only ensure the resolution for cropping
 
     # NOTE: to apply 10/5 crop data augmentations frames should be larger enough in resolution
     # for I3D patches of 224 x 224 and for C3D patches of 112 x 112
     # if H < 226 or W < 226 then resize by keeping aspect ratio with min_side = 226
-    resize_cond = frame.shape[0] < 226 or frame.shape[1] < 226
+    if frame.shape[0] < 226 or frame.shape[1] < 226:
+        frame = cv_t.Resize(226)(frame)
 
-    transform = cv_t.Compose(
-        [
-            cv_t.Lambda(lambda x: cv_t.Resize(226)(x) if resize_cond else x),
-            cv_t.TenCrop(size) if n_crops == 10 else cv_t.FiveCrop(size),
-            cv_t.Lambda(
-                lambda crops: torch.stack([crop_transform(crop) for crop in crops])
-            ),
-        ]
-    )
-    frame = transform(frame)
-    return frame
-
-
-def crop_augmentation_frame_c3d(frame, size, n_crops=10):
     crop_transform = cv_t.Compose(
         [
             cv_t.ToTensor(),
+            image_normalization,
         ]
     )
-    transform = cv_t.Compose(
-        [
-            cv_t.TenCrop(size) if n_crops == 10 else cv_t.FiveCrop(size),
-            cv_t.Lambda(
-                lambda crops: torch.stack([crop_transform(crop) for crop in crops])
-            ),
-        ]
-    )
-
-    return transform(frame)
+    transform = CropAugmentationFrame(size, n_crops, crop_transform=crop_transform)
+    frame = transform(frame)
+    return frame
 
 
 def transform_clip_c3d(frames_path, image_size, n_crops):
@@ -128,12 +114,11 @@ def transform_clip_c3d(frames_path, image_size, n_crops):
     frames = frames - sports1m_mean
 
     processed_frames = torch.zeros((n_frames, n_crops, 3, image_size, image_size))
+    transform = CropAugmentationFrame(image_size, n_crops, crop_transform=cv_t.ToTensor())
 
     # crop patches of 112x112 for all 16 j-frames of the clip-i
     for j in range(n_frames):
-        processed_frames[j] = crop_augmentation_frame_c3d(
-            frames[j], image_size, n_crops
-        )
+        processed_frames[j] = transform(frames[j])
 
     return processed_frames
 
