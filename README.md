@@ -18,6 +18,7 @@ For ```I3D``` feature numpy file of dimension ```int(n/16) + 1 * 10 * 1024``` wh
 
 ### I3D(Inception-V1) Setup
 * Download pretrained weights (Kinetics400) from [here](https://github.com/piergiaj/pytorch-i3d)
+* The model i have used: [rgb_imagenet.pt](https://github.com/piergiaj/pytorch-i3d/blob/05783d11f9632b25fe3d50395a9c9bb51f848d6d/models/rgb_imagenet.pt)
 
 ### Parameters
 <pre>
