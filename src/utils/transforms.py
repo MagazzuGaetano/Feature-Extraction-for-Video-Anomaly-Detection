@@ -9,6 +9,7 @@ from deprecation import deprecated
 sports1m_mean = np.load("data/c3d_mean.npy")
 sports1m_mean = sports1m_mean.squeeze().transpose(1, 2, 3, 0).astype(np.float32)
 
+
 class CropAugmentationFrame(cv_t.Compose):
     def __init__(self, size, n_crops=10, crop_transform=None):
         self.size = size
@@ -21,6 +22,7 @@ class CropAugmentationFrame(cv_t.Compose):
                 lambda crops: torch.stack([crop_transform(crop) for crop in crops])
             ),
         ]
+
 
 @deprecated(
     details="This is an approximation. You should subtract the mean tensor by using the 'transform_clip_c3d' function."
@@ -56,21 +58,9 @@ def i3d_normalization(tensor):
     return tensor
 
 
-def read_frame(frame_path):
-    # read a single frame
+def read_frame(frame_path, use_rgb=False):
+    # read a single frame image
     frame = cv2.imread(frame_path)
-
-    if len(frame.shape) <= 2:
-        frame = cv2.merge([frame, frame, frame])
-
-    return frame
-
-
-def transform_frame(frame_path, size, image_normalization, use_rgb=False, n_crops=10):
-    """Given a single frame return the preprocessed frame, in case of 10/5 crop
-    data augmentation more frames are returned"""
-
-    frame = cv2.imread(frame_path)  # read a single frame
 
     # Grayscale frames are converted in RGB frames by repeating the same channel
     if len(frame.shape) <= 2:
@@ -79,6 +69,13 @@ def transform_frame(frame_path, size, image_normalization, use_rgb=False, n_crop
     # NOTE: opencv read images in BGR format
     if use_rgb:
         frame = frame[:, :, [2, 1, 0]]  # from BGR to RGB
+
+    return frame
+
+
+def transform_frame_i3d(frame, patch_size, n_crops=10):
+    """Given a single frame return the preprocessed frame, in case of 10/5 crop
+    data augmentation more frames are returned"""
 
     # NOTE: in the original preprocessing of I3D all frames are resized with the min_side to 256
     # but i never used resize because I get better results without, i only ensure the resolution for cropping
@@ -89,18 +86,59 @@ def transform_frame(frame_path, size, image_normalization, use_rgb=False, n_crop
     if frame.shape[0] < 226 or frame.shape[1] < 226:
         frame = cv_t.Resize(226)(frame)
 
+    # transforms applied to single crops
     crop_transform = cv_t.Compose(
         [
             cv_t.ToTensor(),
-            image_normalization,
+            i3d_normalization,
         ]
     )
-    transform = CropAugmentationFrame(size, n_crops, crop_transform=crop_transform)
+    # 10/5 crop data augmentation
+    transform = CropAugmentationFrame(
+        patch_size, n_crops, crop_transform=crop_transform
+    )
     frame = transform(frame)
     return frame
 
 
-def transform_clip_c3d(frames_path, image_size, n_crops):
+def transform_clip_from_frames_i3d(frames, patch_size, n_crops):
+    n_frames = frames.shape[0]  # T x H x W x C
+    out_frames = torch.zeros((n_frames, n_crops, 3, patch_size, patch_size))
+
+    # transform each single frame in the clip
+    for j in range(n_frames):
+        out_frames[j] = transform_frame_i3d(frames[j], patch_size, n_crops)
+
+    return out_frames
+
+
+def transform_clip_from_frames_c3d(frames, patch_size, n_crops):
+    n_frames = frames.shape[0] # T x H x W x C
+    H = 128
+    W = 171
+    CH = 3
+
+    # resize all 16 j-frames of the clip-i
+    resized_frames = np.zeros((n_frames, H, W, CH), dtype=np.float32)
+    for j in range(n_frames):
+        resized_frames[j] = cv_t.Resize((H, W))(frames[j])
+
+    # mean-subtraction normalization sports-1m
+    resized_frames = resized_frames - sports1m_mean
+
+    processed_frames = torch.zeros((n_frames, n_crops, CH, patch_size, patch_size))
+    transform = CropAugmentationFrame(
+        patch_size, n_crops, crop_transform=cv_t.ToTensor()
+    )
+
+    # crop patches of 112x112 for all 16 j-frames of the clip-i
+    for j in range(n_frames):
+        processed_frames[j] = transform(resized_frames[j])
+
+    return processed_frames
+
+
+def transform_clip_from_paths_c3d(frames_path, patch_size, n_crops):
     n_frames = len(frames_path)
     frames = np.zeros((n_frames, 128, 171, 3))
 
@@ -113,8 +151,10 @@ def transform_clip_c3d(frames_path, image_size, n_crops):
     frames = np.asarray(frames, dtype=np.float32)
     frames = frames - sports1m_mean
 
-    processed_frames = torch.zeros((n_frames, n_crops, 3, image_size, image_size))
-    transform = CropAugmentationFrame(image_size, n_crops, crop_transform=cv_t.ToTensor())
+    processed_frames = torch.zeros((n_frames, n_crops, 3, patch_size, patch_size))
+    transform = CropAugmentationFrame(
+        patch_size, n_crops, crop_transform=cv_t.ToTensor()
+    )
 
     # crop patches of 112x112 for all 16 j-frames of the clip-i
     for j in range(n_frames):
@@ -123,15 +163,13 @@ def transform_clip_c3d(frames_path, image_size, n_crops):
     return processed_frames
 
 
-def transform_clip_i3d(frames_path, image_size, image_normalization, use_rgb, n_crops):
+def transform_clip_from_paths_i3d(frames_path, patch_size, use_rgb, n_crops):
+    def process_frame(frame_path):
+        frame = read_frame(frame_path, use_rgb)
+
+        return transform_frame_i3d(frame, patch_size, n_crops)
+
     with ThreadPoolExecutor(max_workers=8) as executor:
-        processed_frames = list(
-            executor.map(
-                lambda x: transform_frame(
-                    x, image_size, image_normalization, use_rgb, n_crops
-                ),
-                frames_path,
-            )
-        )
+        processed_frames = list(executor.map(process_frame, frames_path))
 
     return torch.stack(processed_frames)

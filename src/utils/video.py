@@ -6,9 +6,8 @@ import cv2
 from concurrent.futures import ThreadPoolExecutor, wait, ALL_COMPLETED
 
 from src.utils.transforms import (
-    i3d_normalization,
-    transform_clip_c3d,
-    transform_clip_i3d,
+    transform_clip_from_paths_c3d,
+    transform_clip_from_paths_i3d,
 )
 
 
@@ -44,7 +43,7 @@ def extract_frames_from_video(video_name, output_dir):
     return frame_count, frame_res
 
 
-def read_video(video_path, transform_frame=None):
+def read_video(video_path, use_rgb=False, transform_frame=None):
     # Empty List declared to store video frames
     frames_list = []
 
@@ -60,12 +59,20 @@ def read_video(video_path, transform_frame=None):
         if not success:
             break
 
+        # Grayscale frames are converted in RGB frames by repeating the same channel
+        if len(frame.shape) <= 2:
+            frame = cv2.merge([frame, frame, frame])
+
+        # NOTE: opencv read images in BGR format
+        if use_rgb:
+            frame = frame[:, :, [2, 1, 0]]  # from BGR to RGB
+
         # preprocess the frame
         if transform_frame:
-            preprocessed_frame = transform_frame(frame)
+            frame = transform_frame(frame)
 
         # Appending the preprocessed frame into the frames list
-        frames_list.append(preprocessed_frame)
+        frames_list.append(frame)
 
     # Closing the VideoCapture object and releasing all resources.
     video_reader.release()
@@ -109,10 +116,10 @@ def split_clip_indices_into_batches(frame_indices, batch_size):
 
 def load_rgb_batch(frames_dir, rgb_files, frame_indices, feature, device, n_crops):
     # B=16 x T=16 x CROP=10 x CH=3 x H x W
-    image_size = 224 if feature == "I3D" else 112
+    patch_size = 224 if feature == "I3D" else 112
 
     out = torch.zeros(
-        frame_indices.shape + (n_crops, 3, image_size, image_size), device=device
+        frame_indices.shape + (n_crops, 3, patch_size, patch_size), device=device
     )
 
     n_clips = frame_indices.shape[0]  # num of clips
@@ -125,11 +132,13 @@ def load_rgb_batch(frames_dir, rgb_files, frame_indices, feature, device, n_crop
         ]
 
         if feature == "I3D":
-            processed_frames = transform_clip_i3d(
-                frames_path, 224, i3d_normalization, True, n_crops
+            processed_frames = transform_clip_from_paths_i3d(
+                frames_path, patch_size, True, n_crops
             )
         else:
-            processed_frames = transform_clip_c3d(frames_path, 112, n_crops)
+            processed_frames = transform_clip_from_paths_c3d(
+                frames_path, patch_size, n_crops
+            )
 
         out[i] = processed_frames
 
